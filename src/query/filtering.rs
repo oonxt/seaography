@@ -81,17 +81,8 @@ where
     };
 
     let condition = if let Some(not) = filters.get("not") {
-        let filters = not.list().unwrap();
-
-        condition.add(
-            filters
-                .iter()
-                .fold(Condition::all(), |condition, filters: ValueAccessor| {
-                    let filters = filters.object().unwrap();
-                    condition.add(recursive_prepare_condition::<T>(context, filters))
-                })
-                .not(),
-        )
+        let filters = not.object().unwrap();
+        condition.add(recursive_prepare_condition::<T>(context, filters)).not()
     } else {
         condition
     };
