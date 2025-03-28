@@ -8,12 +8,8 @@ use sea_orm::{
     ColumnTrait, Condition, DatabaseConnection, EntityTrait, Iden, ModelTrait, QueryFilter, Related,
 };
 
-use crate::{
-    apply_memory_pagination, apply_order, apply_pagination, get_filter_conditions, BuilderContext,
-    ConnectionObjectBuilder, EntityObjectBuilder, FilterInputBuilder, GuardAction,
-    HashableGroupKey, KeyComplex, OneToManyLoader, OneToOneLoader, OrderInputBuilder,
-    PaginationInputBuilder,
-};
+use crate::{apply_memory_pagination, apply_order, apply_pagination, get_filter_conditions, BuilderContext, ConnectionObjectBuilder, DistinctOnEnumBuilder, EntityObjectBuilder, FilterInputBuilder, GuardAction, HashableGroupKey, KeyComplex, OneToManyLoader, OneToOneLoader, OrderInputBuilder, PaginationInputBuilder};
+use crate::query::distinct_on::apply_distinct_on;
 
 /// This builder produces a GraphQL field for an SeaORM entity related trait
 /// that can be added to the entity object
@@ -49,6 +45,7 @@ impl EntityObjectViaRelationBuilder {
         let connection_object_builder = ConnectionObjectBuilder { context };
         let filter_input_builder = FilterInputBuilder { context };
         let order_input_builder = OrderInputBuilder { context };
+        let distinct_on_enum_builder = DistinctOnEnumBuilder { context };
 
         let object_name: String = entity_object_builder.type_name::<R>();
         let guard = self.context.guards.entity_guards.get(&object_name);
@@ -108,6 +105,8 @@ impl EntityObjectViaRelationBuilder {
                     let filters = get_filter_conditions::<R>(context, filters);
                     let order_by = ctx.args.get(&context.entity_query_field.order_by);
                     let order_by = OrderInputBuilder { context }.parse_object::<R>(order_by);
+                    let distinct_on = ctx.args.get(&context.entity_query_field.distinct_on);
+                    let distinct_on = DistinctOnEnumBuilder { context }.parse_object::<R>(distinct_on);
                     let key = KeyComplex::<R> {
                         key: vec![parent.get(from_col)],
                         meta: HashableGroupKey::<R> {
@@ -115,6 +114,7 @@ impl EntityObjectViaRelationBuilder {
                             columns: vec![to_col],
                             filters: Some(filters),
                             order_by,
+                            distinct_on
                         },
                     };
 
@@ -169,6 +169,9 @@ impl EntityObjectViaRelationBuilder {
                         let order_by = ctx.args.get(&context.entity_query_field.order_by);
                         let order_by = OrderInputBuilder { context }.parse_object::<R>(order_by);
 
+                        let distinct_on = ctx.args.get(&context.entity_query_field.distinct_on);
+                        let distinct_on = DistinctOnEnumBuilder { context }.parse_object::<R>(distinct_on);
+
                         let pagination = ctx.args.get(&context.entity_query_field.pagination);
                         let pagination =
                             PaginationInputBuilder { context }.parse_object(pagination);
@@ -180,6 +183,7 @@ impl EntityObjectViaRelationBuilder {
                             let condition = Condition::all().add(from_col.eq(parent.get(from_col)));
 
                             let stmt = stmt.filter(condition.add(filters));
+                            let stmt = apply_distinct_on(stmt, distinct_on);
                             let stmt = apply_order(stmt, order_by);
                             apply_pagination::<R>(db, stmt, pagination).await?
                         } else {
@@ -192,6 +196,7 @@ impl EntityObjectViaRelationBuilder {
                                     columns: vec![to_col],
                                     filters: Some(filters),
                                     order_by,
+                                    distinct_on
                                 },
                             };
 
@@ -216,6 +221,10 @@ impl EntityObjectViaRelationBuilder {
                 .argument(InputValue::new(
                     &context.entity_query_field.order_by,
                     TypeRef::named(order_input_builder.type_name(&object_name)),
+                ))
+                .argument(InputValue::new(
+                    &context.entity_query_field.distinct_on,
+                    TypeRef::named_nn_list(distinct_on_enum_builder.type_name(&object_name)),
                 ))
                 .argument(InputValue::new(
                     &context.entity_query_field.pagination,

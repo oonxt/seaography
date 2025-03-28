@@ -2,6 +2,7 @@ use sea_orm::{sea_query::ValueTuple, Condition, ModelTrait, QueryFilter};
 use std::{collections::HashMap, hash::Hash, marker::PhantomData, sync::Arc};
 
 use crate::apply_order;
+use crate::query::distinct_on::apply_distinct_on;
 
 #[derive(Clone, Debug)]
 pub struct KeyComplex<T>
@@ -110,6 +111,8 @@ where
     pub filters: Option<sea_orm::Condition>,
     /// Ordering
     pub order_by: Vec<(T::Column, sea_orm::sea_query::Order)>,
+    /// DistinctOn
+    pub distinct_on: Vec<T::Column>,
 }
 
 impl<T> PartialEq for HashableGroupKey<T>
@@ -120,6 +123,7 @@ where
         self.filters.eq(&other.filters)
             && format!("{:?}", self.columns).eq(&format!("{:?}", other.columns))
             && format!("{:?}", self.order_by).eq(&format!("{:?}", other.order_by))
+            && format!("{:?}", self.distinct_on).eq(&format!("{:?}", other.distinct_on))
     }
 }
 
@@ -204,6 +208,7 @@ where
                         columns: item.meta.columns,
                         filters: item.meta.filters,
                         order_by: item.meta.order_by,
+                        distinct_on: item.meta.distinct_on,
                     },
                     item.key,
                 )
@@ -244,6 +249,8 @@ where
                     let condition =
                         condition.add(tuple.in_tuples(values.into_iter().map(ValueTuple::Many)));
                     let stmt = stmt.filter(condition);
+
+                    let stmt = apply_distinct_on(stmt, key.distinct_on);
 
                     let stmt = apply_order(stmt, key.order_by);
 
@@ -324,6 +331,7 @@ where
                         columns: item.meta.columns,
                         filters: item.meta.filters,
                         order_by: item.meta.order_by,
+                        distinct_on: item.meta.distinct_on,
                     },
                     item.key,
                 )
@@ -366,7 +374,7 @@ where
                     let stmt = stmt.filter(condition);
 
                     let stmt = apply_order(stmt, key.order_by);
-
+                    let stmt = apply_distinct_on(stmt, key.distinct_on);
                     (cloned_key, stmt.all(&self.connection))
                 },
             )

@@ -17,4 +17,6 @@ pub mod entity_object_relation;
 pub use entity_object_relation::*;
 
 pub mod entity_object_via_relation;
+pub mod distinct_on;
+
 pub use entity_object_via_relation::*;

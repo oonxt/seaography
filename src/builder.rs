@@ -4,15 +4,7 @@ use async_graphql::{
 };
 use sea_orm::{ActiveEnum, ActiveModelTrait, ConnectionTrait, EntityTrait, IntoActiveModel};
 
-use crate::{
-    ActiveEnumBuilder, ActiveEnumFilterInputBuilder, BuilderContext, ConnectionObjectBuilder,
-    CursorInputBuilder, EdgeObjectBuilder, EntityCreateBatchMutationBuilder,
-    EntityCreateOneMutationBuilder, EntityDeleteMutationBuilder, EntityInputBuilder,
-    EntityObjectBuilder, EntityQueryFieldBuilder, EntityUpdateMutationBuilder, FilterInputBuilder,
-    FilterTypesMapHelper, OffsetInputBuilder, OneToManyLoader, OneToOneLoader, OrderByEnumBuilder,
-    OrderInputBuilder, PageInfoObjectBuilder, PageInputBuilder, PaginationInfoObjectBuilder,
-    PaginationInputBuilder,
-};
+use crate::{ActiveEnumBuilder, ActiveEnumFilterInputBuilder, BuilderContext, ConnectionObjectBuilder, CursorInputBuilder, DistinctOnEnumBuilder, EdgeObjectBuilder, EntityCreateBatchMutationBuilder, EntityCreateOneMutationBuilder, EntityDeleteMutationBuilder, EntityInputBuilder, EntityObjectBuilder, EntityQueryFieldBuilder, EntityUpdateMutationBuilder, FilterInputBuilder, FilterTypesMapHelper, OffsetInputBuilder, OneToManyLoader, OneToOneLoader, OrderByEnumBuilder, OrderInputBuilder, PageInfoObjectBuilder, PageInputBuilder, PaginationInfoObjectBuilder, PaginationInputBuilder};
 
 /// The Builder is used to create the Schema for GraphQL
 ///
@@ -117,6 +109,13 @@ impl Builder {
         };
         let order = order_input_builder.to_object::<T>();
         self.inputs.extend(vec![filter, order]);
+
+        //distinct on
+        let distinct_on_enum_builder = DistinctOnEnumBuilder {
+            context: self.context,
+        };
+        let distinct_on = distinct_on_enum_builder.to_enum::<T>();
+        self.enumerations.push(distinct_on);
 
         let entity_query_field_builder = EntityQueryFieldBuilder {
             context: self.context,

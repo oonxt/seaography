@@ -7,9 +7,10 @@ use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter};
 
 use crate::{
     apply_order, apply_pagination, get_filter_conditions, BuilderContext, ConnectionObjectBuilder,
-    EntityObjectBuilder, FilterInputBuilder, GuardAction, OrderInputBuilder,
-    PaginationInputBuilder,
+    DistinctOnEnumBuilder, EntityObjectBuilder, FilterInputBuilder, GuardAction,
+    OrderInputBuilder, PaginationInputBuilder,
 };
+use crate::query::distinct_on::apply_distinct_on;
 
 /// The configuration structure for EntityQueryFieldBuilder
 pub struct EntityQueryFieldConfig {
@@ -19,6 +20,8 @@ pub struct EntityQueryFieldConfig {
     pub filters: String,
     /// name for 'orderBy' field
     pub order_by: String,
+    /// name for 'distinctOn' field
+    pub distinct_on: String,
     /// name for 'pagination' field
     pub pagination: String,
 }
@@ -39,6 +42,14 @@ impl std::default::Default for EntityQueryFieldConfig {
                     "order_by"
                 } else {
                     "orderBy"
+                }
+                .into()
+            },
+            distinct_on: {
+                if cfg!(feature = "field-snake-case") {
+                    "distinct_on"
+                } else {
+                    "distinctOn"
                 }
                 .into()
             },
@@ -81,6 +92,9 @@ impl EntityQueryFieldBuilder {
         let order_input_builder = OrderInputBuilder {
             context: self.context,
         };
+        let distinct_on_input_builder = DistinctOnEnumBuilder {
+            context: self.context,
+        };
         let pagination_input_builder = PaginationInputBuilder {
             context: self.context,
         };
@@ -121,11 +135,14 @@ impl EntityQueryFieldBuilder {
                     let filters = get_filter_conditions::<T>(context, filters);
                     let order_by = ctx.args.get(&context.entity_query_field.order_by);
                     let order_by = OrderInputBuilder { context }.parse_object::<T>(order_by);
+                    let distinct_on =  ctx.args.get(&context.entity_query_field.distinct_on);
+                    let distinct_on = DistinctOnEnumBuilder { context }.parse_object::<T>(distinct_on);
                     let pagination = ctx.args.get(&context.entity_query_field.pagination);
                     let pagination = PaginationInputBuilder { context }.parse_object(pagination);
 
                     let stmt = T::find();
                     let stmt = stmt.filter(filters);
+                    let stmt = apply_distinct_on(stmt, distinct_on);
                     let stmt = apply_order(stmt, order_by);
 
                     let db = ctx.data::<DatabaseConnection>()?;
@@ -143,6 +160,10 @@ impl EntityQueryFieldBuilder {
         .argument(InputValue::new(
             &self.context.entity_query_field.order_by,
             TypeRef::named(order_input_builder.type_name(&object_name)),
+        ))
+        .argument(InputValue::new(
+            &self.context.entity_query_field.distinct_on,
+            TypeRef::named_nn_list(distinct_on_input_builder.type_name(&object_name)),
         ))
         .argument(InputValue::new(
             &self.context.entity_query_field.pagination,

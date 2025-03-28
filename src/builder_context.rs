@@ -1,11 +1,4 @@
-use crate::{
-    ActiveEnumConfig, ActiveEnumFilterInputConfig, ConnectionObjectConfig, CursorInputConfig,
-    EdgeObjectConfig, EntityCreateBatchMutationConfig, EntityCreateOneMutationConfig,
-    EntityDeleteMutationConfig, EntityInputConfig, EntityObjectConfig, EntityQueryFieldConfig,
-    EntityUpdateMutationConfig, FilterInputConfig, OffsetInputConfig, OrderByEnumConfig,
-    OrderInputConfig, PageInfoObjectConfig, PageInputConfig, PaginationInfoObjectConfig,
-    PaginationInputConfig,
-};
+use crate::{ActiveEnumConfig, ActiveEnumFilterInputConfig, ConnectionObjectConfig, CursorInputConfig, DistinctOnConfig, EdgeObjectConfig, EntityCreateBatchMutationConfig, EntityCreateOneMutationConfig, EntityDeleteMutationConfig, EntityInputConfig, EntityObjectConfig, EntityQueryFieldConfig, EntityUpdateMutationConfig, FilterInputConfig, OffsetInputConfig, OrderByEnumConfig, OrderInputConfig, PageInfoObjectConfig, PageInputConfig, PaginationInfoObjectConfig, PaginationInputConfig};
 
 pub mod guards;
 pub use guards::*;
@@ -31,6 +24,8 @@ pub struct BuilderContext {
     pub pagination_input: PaginationInputConfig,
 
     pub order_input: OrderInputConfig,
+
+    pub distinct_on_input: DistinctOnConfig,
 
     pub filter_input: FilterInputConfig,
     pub active_enum_filter_input: ActiveEnumFilterInputConfig,
